@@ -1,4 +1,5 @@
 const User = require('../models/user');
+const {check, validationResult, body} = require('express-validator');
 
 const getUserParams = (body) => {
     return {
@@ -31,7 +32,10 @@ module.exports = {
         res.render("users/new");
     },
     create: (req, res, next) => {
-        let userParams = getUserParams(req.body);
+        if (req.skip) {
+            next();
+        } else {
+            let userParams = getUserParams(req.body);
         User.create(userParams)
             .then(user => {
                 req.flash("success", `${user.fullName}'s account created successfully!`);
@@ -45,11 +49,15 @@ module.exports = {
                 req.flash("error", `Failed to create user account because: ${error.message}.`);
                 next();
             });
+        }
     },
     redirectView: (req, res, next) => {
         let redirectPath = res.locals.redirect;
-        if (redirectPath) res.redirect(redirectPath);
-        else next();
+        if (redirectPath) {
+             res.redirect(redirectPath);
+        } else {
+            next();
+        }
     },
     show: (req, res, next) => {
         const userId = req.params.id;
@@ -115,13 +123,22 @@ module.exports = {
             email: req.body.email
         })
             .then(user => {
-                if (user && user.password === req.body.password){
-                    res.locals.redirect = `/users/${user._id}`;
-                    req.flash("success", `${user.fullName}'s logged in successfully!`);
-                    res.locals.user = user;
-                    next();
+                if (user){
+                    user.passwordComparison(req.body.password)
+                        .then(passwordMatch => {
+                            if (passwordMatch) {
+                                res.locals.redirect = `/users/${user._id}`;
+                                req.flash("success", `${user.fullName}'s logged in successfully!`);
+                                res.locals.user = user;
+                            } else {
+                                req.flash("error", "Your account or password is incorrect. Please try again or contact your system administrator!");
+                                res.locals.redirect = "/users/login";
+                            }
+                            next();
+                        })
+
                 } else {
-                    req.flash("error", "Your account or password is incorrect. Please try again or contact your system administrator!");
+                    req.flash("error", "Failed to log in user account: User account not found.");
                     res.locals.redirect = "/users/login";
                     next();
                 }
@@ -129,6 +146,42 @@ module.exports = {
             .catch(error => {
                 console.log(`Error logging in user: ${error.message}`);
                 next(error);
+            });
+    },
+
+    userCheck: [
+        body('email')
+            .normalizeEmail({all_lowercase: true})
+            .trim(),
+        check('email')
+            .isEmail()
+            .withMessage("Email is invalid"),
+        check('zipCode')
+            .notEmpty()
+            .withMessage("Zip code cannot be empty")
+            .isInt()
+            .withMessage("Zip code must be integer")
+            .isLength({
+                min: 5,
+                max: 5
             })
+            .withMessage("Length of Zipcode must be 5 digits"),
+        check('password')
+            .notEmpty()
+            .withMessage("Password cannot be empty")
+    ],
+
+    validate: (req, res, next) => {
+        const errors = validationResult(req);
+        if(!errors.isEmpty()) {
+            let messages = errors.array().map(e => e.msg);
+            console.log(messages);
+            req.skip = true;
+            req.flash("error", messages.join(" and "));
+            res.locals.redirect = "/users/new";
+            next();
+        } else {
+            next();
+        }
     }
 };

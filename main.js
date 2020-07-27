@@ -10,6 +10,7 @@ const methodOverride = require('method-override');
 const expressSession = require('express-session');
 const cookieParser = require('cookie-parser');
 const connectFlash = require('connect-flash');
+// const {check, validationResult, body} = require('express-validator');
 
 
 const router = express.Router();
@@ -30,7 +31,7 @@ router.use((req, res, next) => {
 
 router.get("/subscribers", subscribersController.index, subscribersController.indexView);
 router.get("/subscribers/new", subscribersController.new);
-router.post("/subscribers/create", subscribersController.create, subscribersController.redirectView);
+router.post("/subscribers/create",  subscribersController.create, subscribersController.redirectView);
 router.get("/subscribers/:id", subscribersController.show, subscribersController.showView);
 router.get("/subscribers/:id/edit", subscribersController.edit);
 router.put("/subscribers/:id/update", subscribersController.update, subscribersController.redirectView);
@@ -38,7 +39,7 @@ router.delete("/subscribers/:id/delete", subscribersController.delete, subscribe
 
 router.get("/users", usersController.index, usersController.indexView);
 router.get("/users/new", usersController.new);
-router.post("/users/create", usersController.create, usersController.redirectView);
+router.post("/users/create",  usersController.userCheck, usersController.validate, usersController.create, usersController.redirectView);
 router.get("/users/login", usersController.login);
 router.post("/users/login", usersController.authenticate, usersController.redirectView);
 router.get("/users/:id", usersController.show, usersController.showView);
@@ -69,6 +70,8 @@ app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(express.urlencoded( {extended: false}));
 app.use(express.json());
+// router.use(expressValidator()); // must be declared after express.urlencoded and after express.json
+
 app.use(layouts);
 app.use(methodOverride("_method", {methods: ["POST", "GET"]}));
 app.use("/", router);
