@@ -13,12 +13,6 @@ const connectFlash = require('connect-flash');
 const passport = require('passport');
 const User = require('./models/user');
 
-passport.use(User.createStrategy());
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
-
-
-
 
 
 const router = express.Router();
@@ -35,6 +29,10 @@ router.use(connectFlash());
 
 router.use(passport.initialize());
 router.use(passport.session());
+passport.use(User.createStrategy());
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 router.use((req, res, next) => {
     res.locals.flashMessages = req.flash();
     res.locals.loggedIn = req.isAuthenticated();
